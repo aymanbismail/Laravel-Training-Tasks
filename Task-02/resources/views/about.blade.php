@@ -7,9 +7,9 @@
 </head>
 
 <body>
+    @include('partials.navbar')
     <h1>About</h1>
     <p>{{ $info }}</p>
-    <p><a href="/">Home</a> | <a href="/features">Features</a> | <a href="/team">Team</a></p>
 </body>
 
 </html>

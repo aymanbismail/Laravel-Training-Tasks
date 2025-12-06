@@ -1,59 +1,174 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Task 2 – Laravel MVC with Multiple Controller Methods
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+## Objective
+
+Create a Laravel web application that demonstrates the MVC pattern by using a controller with multiple methods. Each method returns a different Blade view and passes different types of data (strings and arrays) to be displayed using Blade and loops.
+
+## Requirements
+
+### Controller: `HomeController`
+
+A controller named `HomeController` with four methods:
+
+| Method       | View Returned        | Data Passed                                       |
+| ------------ | -------------------- | ------------------------------------------------- |
+| `index()`    | `home.blade.php`     | `$title` - A welcome message string               |
+| `about()`    | `about.blade.php`    | `$info` - A short descriptive text                |
+| `features()` | `features.blade.php` | `$features` - An indexed array of feature strings |
+| `team()`     | `team.blade.php`     | `$team` - An associative array of team members    |
+
+### Routes
+
+Routes defined in `routes/web.php`:
+
+| URL         | Controller Method         |
+| ----------- | ------------------------- |
+| `/`         | `HomeController@index`    |
+| `/about`    | `HomeController@about`    |
+| `/features` | `HomeController@features` |
+| `/team`     | `HomeController@team`     |
+
+### Blade Views
+
+-   **`home.blade.php`**: Displays the `$title` variable passed from the controller.
+-   **`about.blade.php`**: Displays the `$info` variable passed from the controller.
+-   **`features.blade.php`**: Displays an unordered list (`<ul>`) of features using `@foreach` loop.
+-   **`team.blade.php`**: Displays a table of team members (name and role) using `@foreach` loop.
+
+## Project Structure
+
+```
+app/
+└── Http/
+    └── Controllers/
+        └── HomeController.php      # Controller with 4 methods
+
+resources/
+└── views/
+    ├── home.blade.php              # Home page view
+    ├── about.blade.php             # About page view
+    ├── features.blade.php          # Features list view
+    ├── team.blade.php              # Team table view
+    └── partials/
+        └── navbar.blade.php        # Reusable navigation partial
+
+routes/
+└── web.php                         # Route definitions with named routes
+```
+
+## Implementation Details
+
+### Named Routes
+
+Routes are defined with names for cleaner URL generation:
+
+```php
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/about', [HomeController::class, 'about'])->name('about');
+Route::get('/features', [HomeController::class, 'features'])->name('features');
+Route::get('/team', [HomeController::class, 'team'])->name('team');
+```
+
+### Blade Partials
+
+Navigation is extracted into a reusable partial (`partials/navbar.blade.php`):
+
+```blade
+<p>
+    <a href="{{ route('home') }}">Home</a> |
+    <a href="{{ route('about') }}">About</a> |
+    <a href="{{ route('features') }}">Features</a> |
+    <a href="{{ route('team') }}">Team</a>
 </p>
+```
 
-## About Laravel
+Include it in any view using:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+```blade
+@include('partials.navbar')
+```
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### HomeController Methods
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```php
+// index() - passes a title string
+$title = "Welcome to my Laravel MVC demo!";
+return view('home', compact('title'));
 
-## Learning Laravel
+// about() - passes an info string
+$info = "This is a simple about page...";
+return view('about', compact('info'));
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+// features() - passes an indexed array
+$features = ["Eloquent ORM", "Blade Templating", "Routing", ...];
+return view('features', compact('features'));
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+// team() - passes an associative array
+$team = [
+    ['name' => 'Alice Johnson', 'role' => 'Project Manager'],
+    ['name' => 'Bob Smith', 'role' => 'Backend Developer'],
+    ...
+];
+return view('team', compact('team'));
+```
 
-## Laravel Sponsors
+### Blade Loops
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+**Features View (`@foreach` with indexed array):**
 
-### Premium Partners
+```blade
+<ul>
+    @foreach($features as $feature)
+        <li>{{ $feature }}</li>
+    @endforeach
+</ul>
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+**Team View (`@foreach` with associative array):**
 
-## Contributing
+```blade
+<table>
+    @foreach($team as $member)
+        <tr>
+            <td>{{ $member['name'] }}</td>
+            <td>{{ $member['role'] }}</td>
+        </tr>
+    @endforeach
+</table>
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Expected Output
 
-## Code of Conduct
+| URL                              | Expected Display                                        |
+| -------------------------------- | ------------------------------------------------------- |
+| `http://localhost:8000/`         | Title text from `index()` method                        |
+| `http://localhost:8000/about`    | Descriptive text from `about()` method                  |
+| `http://localhost:8000/features` | Unordered list generated from features array using loop |
+| `http://localhost:8000/team`     | Table of team members generated using loop              |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Key Concepts Demonstrated
 
-## Security Vulnerabilities
+-   **MVC Pattern**: Separation of concerns between Controller (logic) and View (presentation)
+-   **Controller Methods**: Multiple actions within a single controller
+-   **Data Passing**: Passing variables from controller to Blade views using `compact()`
+-   **Blade Templating**: Using `{{ $variable }}` for output escaping
+-   **Blade Loops**: Using `@foreach` directive to iterate over arrays
+-   **Named Routes**: Using `->name()` for cleaner URL generation with `route()` helper
+-   **Blade Partials**: Using `@include()` for reusable view components
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Running the Application
+
+```bash
+# Start the development server
+php artisan serve
+
+# Visit the routes in your browser:
+# http://localhost:8000/
+# http://localhost:8000/about
+# http://localhost:8000/features
+# http://localhost:8000/team
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

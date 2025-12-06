@@ -20,6 +20,7 @@
 </head>
 
 <body>
+    @include('partials.navbar')
     <h1>Team Members</h1>
 
     <table>
@@ -38,8 +39,6 @@
             @endforeach
         </tbody>
     </table>
-
-    <p><a href="/">Home</a> | <a href="/about">About</a> | <a href="/features">Features</a></p>
 </body>
 
 </html>
