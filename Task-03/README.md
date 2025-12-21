@@ -1,27 +1,40 @@
-# Task 03: Basic Database Operations - Model, Migration, and Seeder
+# Task 03: Product Management System - CRUD Operations with Categories
 
-This Laravel project demonstrates basic database operations including creating a Product model, defining a migration schema, and using seeders to populate the database with dummy data.
+This Laravel project demonstrates a complete product management system with full CRUD operations, category relationships, form validation, and a user-friendly web interface.
 
 ## Project Overview
 
 This task covers:
 
--   Creating the `Product` model with mass assignment protection
--   Defining the `products` table schema via migration
--   Using `ProductSeeder` to insert dummy product data
--   Verifying data using Laravel Tinker
+-   **Models & Relationships**: `Product` and `Category` models with one-to-many relationship
+-   **Database Migrations**: Creating `products` and `categories` tables with foreign key constraints
+-   **Seeders**: Populating the database with categories and products
+-   **Resource Controller**: Full CRUD operations via `ProductController`
+-   **Form Request Validation**: `StoreProductRequest` and `UpdateProductRequest` for data validation
+-   **Blade Views**: Interactive UI for listing, creating, editing, and deleting products
+-   **Route Management**: Using Laravel resource routes for RESTful operations
 
 ## Database Schema
 
-The `products` table contains the following fields:
+### Categories Table
 
-| Field      | Type          | Description                  |
-| ---------- | ------------- | ---------------------------- |
-| id         | Primary Key   | Auto-incrementing ID         |
-| name       | String        | Product name                 |
-| price      | Decimal(10,2) | Product price                |
-| created_at | Timestamp     | Record creation timestamp    |
-| updated_at | Timestamp     | Record last update timestamp |
+| Field      | Type        | Description                  |
+| ---------- | ----------- | ---------------------------- |
+| id         | Primary Key | Auto-incrementing ID         |
+| name       | String      | Category name                |
+| created_at | Timestamp   | Record creation timestamp    |
+| updated_at | Timestamp   | Record last update timestamp |
+
+### Products Table
+
+| Field       | Type          | Description                  |
+| ----------- | ------------- | ---------------------------- |
+| id          | Primary Key   | Auto-incrementing ID         |
+| name        | String        | Product name                 |
+| price       | Decimal(10,2) | Product price                |
+| category_id | Foreign Key   | References categories.id     |
+| created_at  | Timestamp     | Record creation timestamp    |
+| updated_at  | Timestamp     | Record last update timestamp |
 
 ## Installation & Setup
 
@@ -66,14 +79,15 @@ php artisan migrate
 
 ### 5. Run Seeders
 
-Populate the database with dummy products:
+Populate the database with categories and products:
 
 ```bash
-# Run only the ProductSeeder
-php artisan db:seed --class=ProductSeeder
-
-# Or run all seeders (includes ProductSeeder)
+# Run all seeders (CategorySeeder and ProductSeeder)
 php artisan db:seed
+
+# Or run seeders individually
+php artisan db:seed --class=CategorySeeder
+php artisan db:seed --class=ProductSeeder
 ```
 
 ### 6. Fresh Migration with Seeding (Optional)
@@ -83,6 +97,53 @@ To reset and reseed the database:
 ```bash
 php artisan migrate:fresh --seed
 ```
+
+### 7. Start Development Server
+
+Start the Laravel development server:
+
+```bash
+php artisan serve
+```
+
+Visit `http://localhost:8000` in your browser to view the application.
+
+## Features
+
+### Product Management
+
+-   **List Products**: View all products with their categories in a table
+-   **Create Product**: Add new products with name, price, and category
+-   **Edit Product**: Update existing product information
+-   **Delete Product**: Remove products from the database
+-   **Category Filtering**: Products are associated with categories
+
+### Validation
+
+Form requests ensure data integrity:
+
+-   **Product Name**: Required, string, max 255 characters
+-   **Price**: Required, numeric, minimum 0
+-   **Category**: Required, must exist in categories table
+
+## Routes
+
+The application uses Laravel resource routes:
+
+```php
+Route::resource('products', ProductController::class);
+```
+
+This generates the following routes:
+
+| Method | URI                 | Action  | Route Name       |
+| ------ | ------------------- | ------- | ---------------- |
+| GET    | /products           | index   | products.index   |
+| GET    | /products/create    | create  | products.create  |
+| POST   | /products           | store   | products.store   |
+| GET    | /products/{id}/edit | edit    | products.edit    |
+| PUT    | /products/{id}      | update  | products.update  |
+| DELETE | /products/{id}      | destroy | products.destroy |
 
 ## Verifying Data
 
@@ -97,43 +158,128 @@ php artisan tinker
 Then run:
 
 ```php
-App\Models\Product::all();
+// Get all categories
+App\Models\Category::all();
+
+// Get all products with their categories
+App\Models\Product::with('category')->get();
+
+// Get products in a specific category
+App\Models\Category::where('name', 'Electronics')->first()->products;
 ```
 
 Expected output:
 
 ```
+// Products with categories
 Illuminate\Database\Eloquent\Collection {
   all: [
-    App\Models\Product { id: 1, name: "Laptop", price: "999.99", ... },
-    App\Models\Product { id: 2, name: "Smartphone", price: "599.50", ... },
-    App\Models\Product { id: 3, name: "Headphones", price: "149.99", ... },
+    App\Models\Product {
+      id: 1,
+      name: "Laptop",
+      price: "999.99",
+      category_id: 1,
+      category: App\Models\Category { id: 1, name: "Electronics", ... }
+    },
+    // ... more products
   ],
 }
 ```
+
+### Using the Web Interface
+
+1. Navigate to `http://localhost:8000` after starting the server
+2. Browse the list of products
+3. Click "Add New Product" to create a product
+4. Click "Edit" to modify a product
+5. Click "Delete" to remove a product
 
 ## Project Structure
 
 ```
 app/
+├── Http/
+│   ├── Controllers/
+│   │   └── ProductController.php      # Resource controller for CRUD
+│   └── Requests/
+│       ├── StoreProductRequest.php    # Validation for creating products
+│       └── UpdateProductRequest.php   # Validation for updating products
 └── Models/
-    └── Product.php          # Product model with $fillable property
+    ├── Product.php                     # Product model with category relationship
+    └── Category.php                    # Category model with products relationship
 
 database/
 ├── migrations/
-│   └── 2025_xx_xx_create_products_table.php  # Products table schema
+│   ├── 2025_12_06_161500_create_categories_table.php  # Categories table
+│   └── 2025_12_06_161522_create_products_table.php    # Products table with FK
 └── seeders/
-    ├── DatabaseSeeder.php   # Main seeder (calls ProductSeeder)
-    └── ProductSeeder.php    # Seeds 3 dummy products
+    ├── DatabaseSeeder.php              # Main seeder (calls all seeders)
+    ├── CategorySeeder.php              # Seeds 7 categories
+    └── ProductSeeder.php               # Seeds 5 products
+
+resources/
+└── views/
+    └── products/
+        ├── index.blade.php             # List all products
+        ├── create.blade.php            # Create product form
+        └── edit.blade.php              # Edit product form
+
+routes/
+└── web.php                             # Resource routes for products
 ```
 
-## Dummy Products Seeded
+## Seeded Data
 
-| Name       | Price   |
-| ---------- | ------- |
-| Laptop     | $999.99 |
-| Smartphone | $599.50 |
-| Headphones | $149.99 |
+### Categories (7)
+
+-   Electronics
+-   Fashion
+-   Home & Kitchen
+-   Sports & Outdoors
+-   Books
+-   Toys & Games
+-   Health & Beauty
+
+### Products (5)
+
+| Name                | Price   | Category    |
+| ------------------- | ------- | ----------- |
+| Laptop              | $999.99 | Electronics |
+| Smartphone          | $599.50 | Electronics |
+| Headphones          | $149.99 | Electronics |
+| Wireless Mouse      | $29.99  | Electronics |
+| Mechanical Keyboard | $89.99  | Electronics |
+
+## Model Relationships
+
+### Product Model
+
+```php
+public function category(): BelongsTo
+{
+    return $this->belongsTo(Category::class);
+}
+```
+
+### Category Model
+
+```php
+public function products(): HasMany
+{
+    return $this->hasMany(Product::class);
+}
+```
+
+## Key Learning Points
+
+1. **Eloquent Relationships**: Understanding one-to-many relationships between models
+2. **Resource Controllers**: Using Laravel's resource controllers for CRUD operations
+3. **Form Request Validation**: Separating validation logic into dedicated request classes
+4. **Mass Assignment Protection**: Using `$fillable` to protect against mass assignment vulnerabilities
+5. **Database Migrations**: Creating tables with foreign key constraints
+6. **Seeders**: Populating related data (categories before products)
+7. **Blade Templates**: Creating reusable views for CRUD operations
+8. **Route Model Binding**: Automatically injecting models into controller methods
 
 ---
 
