@@ -22,7 +22,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // Call the ProductSeeder to populate products table
-        $this->call(ProductSeeder::class);
+        // Call seeders in order (categories must exist before products)
+        $this->call([
+            CategorySeeder::class,
+            ProductSeeder::class,
+        ]);
     }
 }
