@@ -18,7 +18,7 @@
     </div>
     @endif
 
-    <form action="{{ route('products.store') }}" method="POST">
+    <form action="{{ route('products.store') }}" method="POST" enctype="multipart/form-data">
       @csrf
 
       <div class="form-group">
@@ -51,6 +51,21 @@
         @error('category_id')
         <div class="field-error">{{ $message }}</div>
         @enderror
+      </div>
+
+      <div class="form-group">
+        <label for="image">Product Image <span style="color: #6b7280; font-weight: 400;">(optional, max 2
+            MB)</span></label>
+        <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+          class="@error('image') is-invalid @enderror" onchange="previewImage(event)">
+        @error('image')
+        <div class="field-error">{{ $message }}</div>
+        @enderror
+        <div id="image-preview-container" class="image-preview-container" style="display: none; margin-top: 10px;">
+          <img id="image-preview" class="image-preview" alt="Image preview">
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeImage()"
+            style="margin-top: 8px;">Remove</button>
+        </div>
       </div>
 
       <!-- Suppliers Section -->
@@ -122,6 +137,24 @@
     } else {
       fields.style.display = 'none';
     }
+  }
+
+  function previewImage(event) {
+    var file = event.target.files[0];
+    if (file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('image-preview').src = e.target.result;
+        document.getElementById('image-preview-container').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removeImage() {
+    document.getElementById('image').value = '';
+    document.getElementById('image-preview-container').style.display = 'none';
+    document.getElementById('image-preview').src = '';
   }
 </script>
 @endpush

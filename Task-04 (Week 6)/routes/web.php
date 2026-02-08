@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Products (CRUD)
-    Route::resource('products', ProductController::class)->except(['show']);
+    Route::resource('products', ProductController::class);
 
     // Categories (read-only for now)
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');

@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -89,15 +90,35 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        $product = Product::create(array_merge(
+        $data = array_merge(
             $request->validated(),
             ['user_id' => auth()->id()]
-        ));
+        );
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Remove 'image' key (it's the uploaded file, not a column)
+        unset($data['image'], $data['suppliers']);
+
+        $product = Product::create($data);
 
         // Attach selected suppliers with pivot data
         $this->syncSuppliers($product, $request->input('suppliers', []));
 
         return redirect()->route('products.index')->with('success', 'Product created successfully!');
+    }
+
+    /**
+     * Display the specified product.
+     */
+    public function show(Product $product)
+    {
+        $product->load(['category', 'suppliers', 'user']);
+
+        return view('products.show', compact('product'));
     }
 
     /**
@@ -123,7 +144,21 @@ class ProductController extends Controller
     {
         $this->authorize('update', $product);
 
-        $product->update($request->validated());
+        $data = $request->validated();
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if it exists
+            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Remove keys that are not columns
+        unset($data['image'], $data['suppliers']);
+
+        $product->update($data);
 
         // Sync suppliers with pivot data
         $this->syncSuppliers($product, $request->input('suppliers', []));
@@ -137,6 +172,11 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $this->authorize('delete', $product);
+
+        // Delete image if it exists
+        if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+            Storage::disk('public')->delete($product->image_path);
+        }
 
         $product->delete();
 

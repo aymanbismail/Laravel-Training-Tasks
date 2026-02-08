@@ -29,6 +29,7 @@ class UpdateProductRequest extends FormRequest
             ],
             'price' => 'required|numeric|gt:0',
             'category_id' => 'required|exists:categories,id',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
 
             // Suppliers validation
             'suppliers' => ['required', 'array', function ($attribute, $value, $fail) {
@@ -57,6 +58,9 @@ class UpdateProductRequest extends FormRequest
             'price.gt' => 'Price must be greater than 0.',
             'category_id.required' => 'Please select a category.',
             'category_id.exists' => 'The selected category is invalid.',
+            'image.image' => 'The file must be an image.',
+            'image.mimes' => 'Allowed image types: JPG, PNG, WebP, GIF.',
+            'image.max' => 'Image must not exceed 2 MB.',
             'suppliers.required' => 'Please select at least one supplier.',
             'suppliers.*.cost_price.required_if' => 'Cost price is required for selected suppliers.',
             'suppliers.*.cost_price.numeric' => 'Cost price must be a valid number.',

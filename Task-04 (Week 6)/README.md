@@ -1,6 +1,6 @@
-# Task 09: Products Listing Pro
+# Task 10: Product Image Upload (Storage)
 
-A Laravel product management system with authentication, authorization, a unified layout, dashboard, and a production-style product listing with search, filters, sorting, and pagination. Built across training tasks 04–09.
+A Laravel product management system with authentication, authorization, a unified layout, dashboard, production-style product listing with search/filters/sorting/pagination, and image uploads with storage management. Built across training tasks 04–10.
 
 ## Project Overview
 
@@ -9,6 +9,7 @@ A Laravel product management system with authentication, authorization, a unifie
 - **Unified Layout**: Shared navbar, flash messages, and consistent styling across all pages
 - **Dashboard**: Summary cards (product/category/supplier counts) + latest 5 products table
 - **Products Listing Pro**: Search, category/supplier filters, sorting (6 options), pagination with query persistence
+- **Product Images**: Optional image upload on create/edit, thumbnails in index, full image on show page, live preview
 - **Models & Relationships**: `Product`, `Category`, `Supplier`, `User`
 - **One-to-Many**: Products → Categories, Products → Users (ownership)
 - **Many-to-Many**: Products ↔ Suppliers with pivot data (cost_price, lead_time_days)
@@ -18,7 +19,7 @@ A Laravel product management system with authentication, authorization, a unifie
 - **Form Request Validation**: Validation for products and supplier pivot data
 - **Blade Views**: All views extend `layouts.app` with `@yield('content')`
 - **Eager Loading**: Optimized queries with `with()` and `withCount()`
-- **Tests**: 26 Pest tests covering auth, authorization, search, filters, sorting, and pagination
+- **Tests**: 37 Pest tests covering auth, authorization, search, filters, sorting, pagination, and image uploads
 
 ## Database Schema
 
@@ -50,6 +51,7 @@ A Laravel product management system with authentication, authorization, a unifie
 | name        | String        | Product name (unique)                   |
 | price       | Decimal(10,2) | Product price                           |
 | category_id | Foreign Key   | References categories.id                |
+| image_path  | String (null) | Path to uploaded image on public disk   |
 | user_id     | Foreign Key   | References users.id (nullable, cascade) |
 | created_at  | Timestamp     | Record creation timestamp               |
 | updated_at  | Timestamp     | Record last update timestamp            |
@@ -118,19 +120,25 @@ php artisan key:generate
 php artisan migrate
 ```
 
-### 5. Run Seeders
+### 5. Create Storage Symlink
+
+```bash
+php artisan storage:link
+```
+
+### 6. Run Seeders
 
 ```bash
 php artisan db:seed
 ```
 
-### 6. Build Frontend Assets
+### 7. Build Frontend Assets
 
 ```bash
 npm run build
 ```
 
-### 7. Start Development Server
+### 8. Start Development Server
 
 ```bash
 php artisan serve
@@ -149,6 +157,7 @@ All routes (except auth routes) require authentication.
 | GET    | /products                | index    | ProductController   | products.index   |
 | GET    | /products/create         | create   | ProductController   | products.create  |
 | POST   | /products                | store    | ProductController   | products.store   |
+| GET    | /products/{product}      | show     | ProductController   | products.show    |
 | GET    | /products/{product}/edit | edit     | ProductController   | products.edit    |
 | PUT    | /products/{product}      | update   | ProductController   | products.update  |
 | DELETE | /products/{product}      | destroy  | ProductController   | products.destroy |
@@ -210,6 +219,19 @@ Auth routes (login, register, logout, etc.) are provided by Laravel Breeze via `
 - **Empty state**: "No products found matching your criteria." with Clear Filters button
 - **Security**: Invalid sort keys are rejected and default to `created_at_desc`
 
+### Product Image Upload (Task 10)
+
+- **Optional image field**: File input on create and edit forms with `enctype="multipart/form-data"`
+- **Validation**: `nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048` (2 MB limit)
+- **Storage**: Images stored on the `public` disk under `products/`; served via `storage:link` symlink
+- **Safe updates**: When replacing an image, the old file is deleted from storage before storing the new one
+- **Safe deletes**: When deleting a product, its image is removed from storage
+- **Index thumbnails**: 64×64px thumbnail with `object-fit: cover` in the products table
+- **Show page**: Full-size product image with details (price, category, owner, suppliers, dates)
+- **Placeholder**: SVG image icon displayed when a product has no image
+- **Live preview**: JavaScript `FileReader` preview of selected image before form submission
+- **Product names link to show page**: Product names in the index are clickable links
+
 ### Product Management
 
 - **List Products**: View all products with categories, suppliers, owner
@@ -225,7 +247,7 @@ Auth routes (login, register, logout, etc.) are provided by Laravel Breeze via `
 
 ## Tests
 
-26 Pest tests covering authentication, authorization, and product listing features:
+37 Pest tests covering authentication, authorization, product listing, image uploads, and show page:
 
 ```bash
 php artisan test
@@ -265,6 +287,22 @@ php artisan test
 | Products index shows empty state for no results | Displays "No products found" message            |
 | Pagination preserves query string               | Page 2 with filters retains category_id in URL  |
 
+### Image Upload & Show Page Tests (ProductImageTest)
+
+| Test                                                  | Description                            |
+| ----------------------------------------------------- | -------------------------------------- |
+| User can create a product with an image               | Image stored, path saved to DB         |
+| User can create a product without an image            | image_path is null, product created OK |
+| Image upload rejects non-image files                  | PDF upload triggers validation error   |
+| Image upload rejects files exceeding 2MB              | 3MB file triggers validation error     |
+| User can update a product image and old is deleted    | Old file removed, new file stored      |
+| Deleting a product removes its image from storage     | File cleaned up on product delete      |
+| Authenticated user can view the product show page     | Returns 200 with product details       |
+| Product show page displays image when present         | Image src appears in HTML              |
+| Product show page displays placeholder when no image  | "No image uploaded" text shown         |
+| Products index shows thumbnail when product has image | CSS class product-thumbnail present    |
+| Guest cannot view product show page                   | Redirects to login                     |
+
 ## Project Structure
 
 ```
@@ -301,7 +339,8 @@ database/
 │   ├── create_products_table.php
 │   ├── create_suppliers_table.php
 │   ├── create_product_supplier_table.php
-│   └── add_user_id_to_products_table.php
+│   ├── add_user_id_to_products_table.php
+│   └── add_image_path_to_products_table.php
 └── seeders/
     ├── DatabaseSeeder.php
     ├── CategorySeeder.php
@@ -315,8 +354,9 @@ resources/views/
 ├── dashboard.blade.php                 # Dashboard with cards + latest products
 ├── products/
 │   ├── index.blade.php                 # Product list with search/filter/sort/pagination
-│   ├── create.blade.php                # Create form with supplier selection
-│   └── edit.blade.php                  # Edit form with supplier management
+│   ├── create.blade.php                # Create form with image upload + supplier selection
+│   ├── edit.blade.php                  # Edit form with image upload + supplier management
+│   └── show.blade.php                  # Product detail page with full image
 ├── categories/
 │   └── index.blade.php                 # Category list with product counts
 ├── suppliers/
@@ -330,6 +370,7 @@ routes/
 tests/Feature/
 ├── ExampleTest.php
 ├── ProductAuthorizationTest.php        # 13 auth/authorization tests
+├── ProductImageTest.php                # 11 image upload + show page tests
 └── ProductListingTest.php              # 11 search/filter/sort/pagination tests
 ```
 
@@ -362,3 +403,10 @@ Product ◀──belongsToMany──▶ Supplier (pivot: cost_price, lead_time_d
 15. **Sort Whitelist**: Using a const array to validate allowed sort fields/directions
 16. **Pagination**: `paginate()` + `withQueryString()` for persistent filter state
 17. **Combinable Queries**: Building Eloquent queries conditionally with chained methods
+18. **File Storage**: Laravel's `Storage` facade with the `public` disk for serving uploaded files
+19. **Storage Symlink**: `php artisan storage:link` to expose `storage/app/public` via `public/storage`
+20. **Image Validation**: `image|mimes:...|max:2048` rules for file type and size constraints
+21. **Safe File Replacement**: Deleting old files from disk before storing replacements
+22. **Multipart Forms**: `enctype="multipart/form-data"` required for file upload forms
+23. **Live Image Preview**: JavaScript `FileReader` API for client-side image preview before submit
+24. **Show Page**: Resource controller `show()` method with eager-loaded relationships

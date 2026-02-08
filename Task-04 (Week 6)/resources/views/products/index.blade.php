@@ -76,6 +76,7 @@
       <thead>
         <tr>
           <th>ID</th>
+          <th>Image</th>
           <th>Name</th>
           <th>Category</th>
           <th>Price</th>
@@ -89,7 +90,22 @@
         @foreach($products as $product)
         <tr>
           <td>{{ $product->id }}</td>
-          <td>{{ $product->name }}</td>
+          <td>
+            @if($product->image_path)
+            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}"
+              class="product-thumbnail">
+            @else
+            <div class="image-placeholder" title="No image">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </div>
+            @endif
+          </td>
+          <td><a href="{{ route('products.show', $product) }}"
+              style="color: #2563eb; text-decoration: none; font-weight: 500;">{{ $product->name }}</a></td>
           <td>{{ $product->category->name ?? 'N/A' }}</td>
           <td>${{ number_format($product->price, 2) }}</td>
           <td>{{ $product->user->name ?? 'N/A' }}</td>

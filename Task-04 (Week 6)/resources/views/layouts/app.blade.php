@@ -251,6 +251,92 @@
         .supplier-fields input {
             width: 100%;
         }
+
+        /* Product image styles */
+        .product-thumbnail {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .product-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .image-placeholder {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 6px;
+            border: 1px dashed #d1d5db;
+        }
+
+        .image-placeholder-large {
+            width: 100%;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 8px;
+            border: 1px dashed #d1d5db;
+        }
+
+        .image-preview {
+            max-width: 300px;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .image-preview-container {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            display: inline-block;
+        }
+
+        .current-image-container {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            display: inline-block;
+        }
+
+        .detail-table {
+            width: 100%;
+        }
+
+        .detail-table th {
+            text-align: left;
+            padding: 8px 12px 8px 0;
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 14px;
+            width: 100px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .detail-table td {
+            padding: 8px 0;
+            color: #1f2937;
+            font-size: 14px;
+            border-bottom: 1px solid #f3f4f6;
+        }
     </style>
 
     @stack('styles')
