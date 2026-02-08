@@ -155,7 +155,11 @@
     @endif
 
     <div class="mb-3">
+      @auth
       <a href="{{ route('products.create') }}" class="btn btn-primary">Add New Product</a>
+      @else
+      <a href="{{ route('login') }}" class="btn btn-primary">Login to Add Products</a>
+      @endauth
     </div>
 
     @if($products->count() > 0)
@@ -166,6 +170,7 @@
           <th>Name</th>
           <th>Category</th>
           <th>Price</th>
+          <th>Owner</th>
           <th>Suppliers</th>
           <th>Created At</th>
           <th>Actions</th>
@@ -178,6 +183,7 @@
           <td>{{ $product->name }}</td>
           <td>{{ $product->category->name ?? 'N/A' }}</td>
           <td>${{ number_format($product->price, 2) }}</td>
+          <td>{{ $product->user->name ?? 'N/A' }}</td>
           <td>
             <span class="supplier-count">{{ $product->suppliers_count }}</span>
             @foreach($product->suppliers as $supplier)
@@ -190,13 +196,17 @@
           <td>{{ $product->created_at->format('Y-m-d H:i') }}</td>
           <td>
             <div class="actions">
+              @can('update', $product)
               <a href="{{ route('products.edit', $product) }}" class="btn btn-warning btn-sm">Edit</a>
+              @endcan
+              @can('delete', $product)
               <form action="{{ route('products.destroy', $product) }}" method="POST" style="display: inline;"
                 onsubmit="return confirm('Are you sure you want to delete this product?');">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="btn btn-danger btn-sm">Delete</button>
               </form>
+              @endcan
             </div>
           </td>
         </tr>

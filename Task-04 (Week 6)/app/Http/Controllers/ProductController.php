@@ -16,7 +16,7 @@ class ProductController extends Controller
     public function index()
     {
         // Eager load suppliers and count them to avoid N+1
-        $products = Product::with(['category', 'suppliers'])
+        $products = Product::with(['category', 'suppliers', 'user'])
             ->withCount('suppliers')
             ->get();
 
@@ -39,7 +39,10 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        $product = Product::create($request->validated());
+        $product = Product::create(array_merge(
+            $request->validated(),
+            ['user_id' => auth()->id()]
+        ));
 
         // Attach selected suppliers with pivot data
         $this->syncSuppliers($product, $request->input('suppliers', []));
@@ -52,6 +55,8 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
+        $this->authorize('update', $product);
+
         $categories = Category::all();
         $suppliers = Supplier::all();
 
@@ -66,6 +71,8 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, Product $product)
     {
+        $this->authorize('update', $product);
+
         $product->update($request->validated());
 
         // Sync suppliers with pivot data
@@ -79,6 +86,8 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $this->authorize('delete', $product);
+
         $product->delete();
 
         return redirect()->route('products.index')->with('success', 'Product deleted successfully!');
