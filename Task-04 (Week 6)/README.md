@@ -1,6 +1,6 @@
-# Task 08: Layout + Dashboard (App Shell)
+# Task 09: Products Listing Pro
 
-A Laravel product management system with authentication, authorization, a unified layout shell, and a dashboard with summary cards. Built across multiple training tasks (Tasks 04–08).
+A Laravel product management system with authentication, authorization, a unified layout, dashboard, and a production-style product listing with search, filters, sorting, and pagination. Built across training tasks 04–09.
 
 ## Project Overview
 
@@ -8,6 +8,7 @@ A Laravel product management system with authentication, authorization, a unifie
 - **Authorization**: Product ownership — only the creator can edit/delete their products (Policy-based)
 - **Unified Layout**: Shared navbar, flash messages, and consistent styling across all pages
 - **Dashboard**: Summary cards (product/category/supplier counts) + latest 5 products table
+- **Products Listing Pro**: Search, category/supplier filters, sorting (6 options), pagination with query persistence
 - **Models & Relationships**: `Product`, `Category`, `Supplier`, `User`
 - **One-to-Many**: Products → Categories, Products → Users (ownership)
 - **Many-to-Many**: Products ↔ Suppliers with pivot data (cost_price, lead_time_days)
@@ -17,7 +18,7 @@ A Laravel product management system with authentication, authorization, a unifie
 - **Form Request Validation**: Validation for products and supplier pivot data
 - **Blade Views**: All views extend `layouts.app` with `@yield('content')`
 - **Eager Loading**: Optimized queries with `with()` and `withCount()`
-- **Tests**: 15 Pest tests covering guest denial, owner CRUD, and 403 for non-owners
+- **Tests**: 26 Pest tests covering auth, authorization, search, filters, sorting, and pagination
 
 ## Database Schema
 
@@ -194,6 +195,21 @@ Auth routes (login, register, logout, etc.) are provided by Laravel Breeze via `
 - **Field-level errors**: Inline error messages below each invalid field
 - **`.is-invalid` styling**: Red border on invalid inputs
 
+### Products Listing Pro (Task 09)
+
+- **Search**: Filter products by name via text input
+- **Category filter**: Dropdown to narrow by category
+- **Supplier filter**: Dropdown to narrow by supplier (uses `whereHas`)
+- **Combinable**: Search + category + supplier filters work together
+- **Sorting**: 6 whitelist-validated options:
+    - Newest First / Oldest First (created_at)
+    - Price: Low → High / Price: High → Low
+    - Name: A → Z / Name: Z → A
+- **Pagination**: 10 products per page with `withQueryString()` to preserve filters across pages
+- **Toolbar UI**: Search input, category dropdown, supplier dropdown, sort dropdown, Apply + Clear buttons
+- **Empty state**: "No products found matching your criteria." with Clear Filters button
+- **Security**: Invalid sort keys are rejected and default to `created_at_desc`
+
 ### Product Management
 
 - **List Products**: View all products with categories, suppliers, owner
@@ -209,13 +225,13 @@ Auth routes (login, register, logout, etc.) are provided by Laravel Breeze via `
 
 ## Tests
 
-15 Pest tests covering authentication and authorization:
+26 Pest tests covering authentication, authorization, and product listing features:
 
 ```bash
 php artisan test
 ```
 
-### Test Coverage
+### Auth & Authorization Tests (ProductAuthorizationTest)
 
 | Test                                                              | Description                  |
 | ----------------------------------------------------------------- | ---------------------------- |
@@ -232,6 +248,22 @@ php artisan test
 | Logged in user cannot update another user's product               | Returns 403                  |
 | Logged in user cannot delete another user's product               | Returns 403                  |
 | Logged in user cannot access edit page for another user's product | Returns 403                  |
+
+### Products Listing Tests (ProductListingTest)
+
+| Test                                            | Description                                     |
+| ----------------------------------------------- | ----------------------------------------------- |
+| Products index displays paginated results       | 10 per page, 15 products → first page has 10    |
+| Products index search filters by name           | Searching "Alpha" returns only matching product |
+| Products index filters by category              | Category dropdown narrows results               |
+| Products index filters by supplier              | Supplier dropdown uses whereHas                 |
+| Products index sorts by price ascending         | Cheapest first                                  |
+| Products index sorts by price descending        | Most expensive first                            |
+| Products index defaults to newest first         | Default sort is created_at DESC                 |
+| Products index rejects invalid sort             | Falls back to created_at_desc                   |
+| Products index combines search with category    | Search + category filter together               |
+| Products index shows empty state for no results | Displays "No products found" message            |
+| Pagination preserves query string               | Page 2 with filters retains category_id in URL  |
 
 ## Project Structure
 
@@ -282,7 +314,7 @@ resources/views/
 │   └── app.blade.php                   # Unified layout (navbar, flash, styles)
 ├── dashboard.blade.php                 # Dashboard with cards + latest products
 ├── products/
-│   ├── index.blade.php                 # Product list with owner/supplier info
+│   ├── index.blade.php                 # Product list with search/filter/sort/pagination
 │   ├── create.blade.php                # Create form with supplier selection
 │   └── edit.blade.php                  # Edit form with supplier management
 ├── categories/
@@ -297,7 +329,8 @@ routes/
 
 tests/Feature/
 ├── ExampleTest.php
-└── ProductAuthorizationTest.php        # 13 auth/authorization tests
+├── ProductAuthorizationTest.php        # 13 auth/authorization tests
+└── ProductListingTest.php              # 11 search/filter/sort/pagination tests
 ```
 
 ## Model Relationships
@@ -321,6 +354,11 @@ Product ◀──belongsToMany──▶ Supplier (pivot: cost_price, lead_time_d
 7. **Active Nav Links**: `request()->routeIs()` for highlighting current page
 8. **Many-to-Many with Pivot**: `belongsToMany()->withPivot()->withTimestamps()`
 9. **Eager Loading**: `with()` and `withCount()` to prevent N+1
-10. **Pest Testing**: Feature tests for auth flows and 403 authorization checks
+10. **Pest Testing**: Feature tests for auth flows, authorization, and listing features
 11. **Form Request Validation**: Separating validation with custom error messages
 12. **Middleware Groups**: Protecting route groups with `auth` middleware
+13. **Search**: Using `where('name', 'like', ...)` for text search
+14. **Filtering**: Combining `where` and `whereHas` for category/supplier filters
+15. **Sort Whitelist**: Using a const array to validate allowed sort fields/directions
+16. **Pagination**: `paginate()` + `withQueryString()` for persistent filter state
+17. **Combinable Queries**: Building Eloquent queries conditionally with chained methods
