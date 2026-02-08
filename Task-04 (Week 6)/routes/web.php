@@ -24,6 +24,13 @@ Route::middleware('auth')->group(function () {
     // Products (CRUD)
     Route::resource('products', ProductController::class);
 
+    // Product Trash Management
+    Route::get('products-trash', [ProductController::class, 'trash'])->name('products.trash');
+    Route::post('products-trash/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::delete('products-trash/{id}/force-delete', [ProductController::class, 'forceDelete'])->name('products.forceDelete');
+    Route::post('products-trash/bulk-restore', [ProductController::class, 'bulkRestore'])->name('products.bulkRestore');
+    Route::delete('products-trash/bulk-force-delete', [ProductController::class, 'bulkForceDelete'])->name('products.bulkForceDelete');
+
     // Categories (read-only for now)
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
 

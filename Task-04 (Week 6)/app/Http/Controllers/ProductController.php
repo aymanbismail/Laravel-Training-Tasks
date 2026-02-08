@@ -13,6 +13,14 @@ use Illuminate\Support\Facades\Storage;
 class ProductController extends Controller
 {
     /**
+     * Allowed sort fields and directions for trash (whitelist).
+     */
+    private const TRASH_SORTS = [
+        'deleted_at_desc' => ['field' => 'deleted_at', 'direction' => 'desc', 'label' => 'Newest Deleted'],
+        'deleted_at_asc'  => ['field' => 'deleted_at', 'direction' => 'asc',  'label' => 'Oldest Deleted'],
+    ];
+
+    /**
      * Allowed sort fields and directions (whitelist).
      */
     private const ALLOWED_SORTS = [
@@ -167,20 +175,161 @@ class ProductController extends Controller
     }
 
     /**
-     * Remove the specified product from the database.
+     * Soft-delete the specified product (move to trash).
      */
     public function destroy(Product $product)
     {
         $this->authorize('delete', $product);
+
+        $product->delete();
+
+        return redirect()->route('products.index')->with('success', 'Product moved to trash.');
+    }
+
+    /**
+     * Display the trash page with soft-deleted products, search, filters, and sorting.
+     */
+    public function trash(Request $request)
+    {
+        $query = Product::onlyTrashed()
+            ->with(['category', 'suppliers', 'user']);
+
+        // Search by name
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
+        // Filter by category
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        // Filter by supplier
+        if ($supplierId = $request->input('supplier_id')) {
+            $query->whereHas('suppliers', function ($q) use ($supplierId) {
+                $q->where('suppliers.id', $supplierId);
+            });
+        }
+
+        // Sorting (whitelist-based)
+        $sortKey = $request->input('sort', 'deleted_at_desc');
+        if (!array_key_exists($sortKey, self::TRASH_SORTS)) {
+            $sortKey = 'deleted_at_desc';
+        }
+        $sort = self::TRASH_SORTS[$sortKey];
+        $query->orderBy($sort['field'], $sort['direction']);
+
+        $products = $query->paginate(10)->withQueryString();
+
+        $categories = Category::orderBy('name')->get();
+        $suppliers = Supplier::orderBy('name')->get();
+        $sortOptions = collect(self::TRASH_SORTS)->mapWithKeys(fn ($v, $k) => [$k => $v['label']]);
+
+        return view('products.trash', compact(
+            'products',
+            'categories',
+            'suppliers',
+            'sortOptions',
+            'sortKey'
+        ));
+    }
+
+    /**
+     * Restore a soft-deleted product.
+     */
+    public function restore(string $id)
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+        $this->authorize('restore', $product);
+
+        $product->restore();
+
+        return redirect()->route('products.trash')->with('success', 'Product restored successfully!');
+    }
+
+    /**
+     * Permanently delete a soft-deleted product.
+     */
+    public function forceDelete(string $id)
+    {
+        $product = Product::onlyTrashed()->findOrFail($id);
+        $this->authorize('forceDelete', $product);
+
+        // Safety: prevent force delete if trashed less than 5 minutes ago
+        if ($product->deleted_at->diffInMinutes(now()) < 5) {
+            return redirect()->route('products.trash')
+                ->with('error', 'Cannot permanently delete a product trashed less than 5 minutes ago. Please wait.');
+        }
 
         // Delete image if it exists
         if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
             Storage::disk('public')->delete($product->image_path);
         }
 
-        $product->delete();
+        $product->forceDelete();
 
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully!');
+        return redirect()->route('products.trash')->with('success', 'Product permanently deleted.');
+    }
+
+    /**
+     * Bulk restore selected soft-deleted products.
+     */
+    public function bulkRestore(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return redirect()->route('products.trash')->with('error', 'No products selected.');
+        }
+
+        $products = Product::onlyTrashed()->whereIn('id', $ids)->get();
+        $restored = 0;
+
+        foreach ($products as $product) {
+            if (auth()->id() === $product->user_id) {
+                $product->restore();
+                $restored++;
+            }
+        }
+
+        return redirect()->route('products.trash')
+            ->with('success', "{$restored} product(s) restored successfully!");
+    }
+
+    /**
+     * Bulk force-delete selected soft-deleted products.
+     */
+    public function bulkForceDelete(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return redirect()->route('products.trash')->with('error', 'No products selected.');
+        }
+
+        $products = Product::onlyTrashed()->whereIn('id', $ids)->get();
+        $deleted = 0;
+
+        foreach ($products as $product) {
+            if (auth()->id() !== $product->user_id) {
+                continue;
+            }
+
+            // Safety cooldown: skip products trashed less than 5 minutes ago
+            if ($product->deleted_at->diffInMinutes(now()) < 5) {
+                continue;
+            }
+
+            if ($product->image_path && Storage::disk('public')->exists($product->image_path)) {
+                Storage::disk('public')->delete($product->image_path);
+            }
+
+            $product->forceDelete();
+            $deleted++;
+        }
+
+        return redirect()->route('products.trash')
+            ->with('success', "{$deleted} product(s) permanently deleted.");
     }
 
     /**

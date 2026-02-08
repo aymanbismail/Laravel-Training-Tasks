@@ -24,4 +24,22 @@ class ProductPolicy
     {
         return $user->id === $product->user_id;
     }
+
+    /**
+     * Determine whether the user can restore the product from trash.
+     * Only the product owner can restore it.
+     */
+    public function restore(User $user, Product $product): bool
+    {
+        return $user->id === $product->user_id;
+    }
+
+    /**
+     * Determine whether the user can permanently delete the product.
+     * Only the product owner can force delete it.
+     */
+    public function forceDelete(User $user, Product $product): bool
+    {
+        return $user->id === $product->user_id;
+    }
 }

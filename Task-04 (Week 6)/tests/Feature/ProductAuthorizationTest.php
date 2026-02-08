@@ -129,7 +129,8 @@ test('logged in user can delete their own product', function () {
         ->delete(route('products.destroy', $product))
         ->assertRedirect(route('products.index'));
 
-    $this->assertDatabaseMissing('products', [
+    // Product is now soft-deleted, so it still exists but has deleted_at set
+    $this->assertSoftDeleted('products', [
         'id' => $product->id,
     ]);
 });

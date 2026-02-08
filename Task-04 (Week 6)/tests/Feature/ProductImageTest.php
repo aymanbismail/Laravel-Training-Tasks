@@ -169,8 +169,9 @@ test('deleting a product removes its image from storage', function () {
         ->delete(route('products.destroy', $product))
         ->assertRedirect(route('products.index'));
 
-    $this->assertDatabaseMissing('products', ['id' => $product->id]);
-    Storage::disk('public')->assertMissing($imagePath);
+    // Soft-delete keeps the record and image; image is only removed on force-delete
+    $this->assertSoftDeleted('products', ['id' => $product->id]);
+    Storage::disk('public')->assertExists($imagePath);
 });
 
 /*

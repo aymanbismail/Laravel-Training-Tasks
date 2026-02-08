@@ -7,7 +7,10 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; margin: 0;">Products List</h1>
-      <a href="{{ route('products.create') }}" class="btn btn-primary">Add New Product</a>
+      <div style="display: flex; gap: 8px;">
+        <a href="{{ route('products.trash') }}" class="btn btn-secondary" style="font-size: 13px;">&#128465; Trash</a>
+        <a href="{{ route('products.create') }}" class="btn btn-primary">Add New Product</a>
+      </div>
     </div>
 
     <!-- Search / Filter / Sort Toolbar -->
