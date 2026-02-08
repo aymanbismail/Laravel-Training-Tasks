@@ -11,9 +11,9 @@ use App\Models\User;
 |--------------------------------------------------------------------------
 */
 
-test('guest can view products index', function () {
+test('guest cannot view products index', function () {
     $this->get(route('products.index'))
-        ->assertStatus(200);
+        ->assertRedirect(route('login'));
 });
 
 test('guest cannot access product create page', function () {

@@ -1,22 +1,36 @@
-# Task 06: Many-to-Many Relationship (Products ↔ Suppliers) with Pivot Data
+# Task 08: Layout + Dashboard (App Shell)
 
-This Laravel project demonstrates a complete product management system with CRUD operations, category relationships, and a many-to-many relationship between Products and Suppliers with pivot data.
+A Laravel product management system with authentication, authorization, a unified layout shell, and a dashboard with summary cards. Built across multiple training tasks (Tasks 04–08).
 
 ## Project Overview
 
-This task covers:
-
--   **Models & Relationships**: `Product`, `Category`, and `Supplier` models
--   **One-to-Many**: Products belong to Categories
--   **Many-to-Many**: Products and Suppliers with pivot data (cost_price, lead_time_days)
--   **Database Migrations**: Tables with foreign key constraints and pivot table
--   **Seeders**: Populating categories, suppliers, products, and pivot data
--   **Resource Controller**: Full CRUD operations via `ProductController`
--   **Form Request Validation**: Validation for products and supplier pivot data
--   **Blade Views**: Interactive UI with supplier management
--   **Eager Loading**: Optimized queries with `with()` and `withCount()`
+- **Authentication**: Registration, login, logout via Laravel Breeze (Blade stack)
+- **Authorization**: Product ownership — only the creator can edit/delete their products (Policy-based)
+- **Unified Layout**: Shared navbar, flash messages, and consistent styling across all pages
+- **Dashboard**: Summary cards (product/category/supplier counts) + latest 5 products table
+- **Models & Relationships**: `Product`, `Category`, `Supplier`, `User`
+- **One-to-Many**: Products → Categories, Products → Users (ownership)
+- **Many-to-Many**: Products ↔ Suppliers with pivot data (cost_price, lead_time_days)
+- **Database Migrations**: Tables with foreign key constraints and pivot table
+- **Seeders & Factories**: For populating data and testing
+- **Resource Controller**: Full CRUD for Products with authorization checks
+- **Form Request Validation**: Validation for products and supplier pivot data
+- **Blade Views**: All views extend `layouts.app` with `@yield('content')`
+- **Eager Loading**: Optimized queries with `with()` and `withCount()`
+- **Tests**: 15 Pest tests covering guest denial, owner CRUD, and 403 for non-owners
 
 ## Database Schema
+
+### Users Table
+
+| Field      | Type        | Description                  |
+| ---------- | ----------- | ---------------------------- |
+| id         | Primary Key | Auto-incrementing ID         |
+| name       | String      | User's name                  |
+| email      | String      | User's email (unique)        |
+| password   | String      | Hashed password              |
+| created_at | Timestamp   | Record creation timestamp    |
+| updated_at | Timestamp   | Record last update timestamp |
 
 ### Categories Table
 
@@ -29,14 +43,15 @@ This task covers:
 
 ### Products Table
 
-| Field       | Type          | Description                  |
-| ----------- | ------------- | ---------------------------- |
-| id          | Primary Key   | Auto-incrementing ID         |
-| name        | String        | Product name (unique)        |
-| price       | Decimal(10,2) | Product price                |
-| category_id | Foreign Key   | References categories.id     |
-| created_at  | Timestamp     | Record creation timestamp    |
-| updated_at  | Timestamp     | Record last update timestamp |
+| Field       | Type          | Description                             |
+| ----------- | ------------- | --------------------------------------- |
+| id          | Primary Key   | Auto-incrementing ID                    |
+| name        | String        | Product name (unique)                   |
+| price       | Decimal(10,2) | Product price                           |
+| category_id | Foreign Key   | References categories.id                |
+| user_id     | Foreign Key   | References users.id (nullable, cascade) |
+| created_at  | Timestamp     | Record creation timestamp               |
+| updated_at  | Timestamp     | Record last update timestamp            |
 
 ### Suppliers Table
 
@@ -68,6 +83,7 @@ This task covers:
 
 ```bash
 composer install
+npm install
 ```
 
 ### 2. Configure Environment
@@ -84,7 +100,7 @@ Update the database configuration in `.env`:
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=task_03
+DB_DATABASE=task_03_laravel
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
@@ -97,152 +113,125 @@ php artisan key:generate
 
 ### 4. Run Migrations
 
-Create the database tables:
-
 ```bash
 php artisan migrate
 ```
 
 ### 5. Run Seeders
 
-Populate the database with categories and products:
-
 ```bash
-# Run all seeders (CategorySeeder and ProductSeeder)
 php artisan db:seed
-
-# Or run seeders individually
-php artisan db:seed --class=CategorySeeder
-php artisan db:seed --class=ProductSeeder
 ```
 
-### 6. Fresh Migration with Seeding (Optional)
-
-To reset and reseed the database:
+### 6. Build Frontend Assets
 
 ```bash
-php artisan migrate:fresh --seed
+npm run build
 ```
 
 ### 7. Start Development Server
-
-Start the Laravel development server:
 
 ```bash
 php artisan serve
 ```
 
-Visit `http://localhost:8000` in your browser to view the application.
-
-## Features
-
-### Product Management
-
--   **List Products**: View all products with categories and suppliers
--   **Create Product**: Add new products with name, price, category, and suppliers
--   **Edit Product**: Update existing product information and supplier assignments
--   **Delete Product**: Remove products (cascades to pivot table)
--   **Supplier Display**: Shows supplier count and details with pivot data (cost, lead time)
-
-### Supplier Management
-
--   **Many-to-Many Relationship**: Products can have multiple suppliers and vice versa
--   **Pivot Data**: Each product-supplier relationship stores cost_price and lead_time_days
--   **Form Integration**: Checkbox selection with pivot data inputs in create/edit forms
--   **Sync Operations**: Properly handles adding, removing, and updating supplier relationships
-
-### Validation
-
-Form requests ensure data integrity:
-
--   **Product Name**: Required, string, max 255 characters, unique
--   **Price**: Required, numeric, greater than 0
--   **Category**: Required, must exist in categories table
--   **Suppliers**: At least one supplier must be selected
--   **Cost Price**: Required for selected suppliers, numeric, min 0
--   **Lead Time**: Required for selected suppliers, integer, min 0
+Visit `http://localhost:8000` — you'll be redirected to the login page.
 
 ## Routes
 
-The application uses Laravel resource routes:
+All routes (except auth routes) require authentication.
 
-```php
-Route::resource('products', ProductController::class);
-```
+| Method | URI                      | Action   | Controller          | Route Name       |
+| ------ | ------------------------ | -------- | ------------------- | ---------------- |
+| GET    | /                        | redirect | —                   | —                |
+| GET    | /dashboard               | index    | DashboardController | dashboard        |
+| GET    | /products                | index    | ProductController   | products.index   |
+| GET    | /products/create         | create   | ProductController   | products.create  |
+| POST   | /products                | store    | ProductController   | products.store   |
+| GET    | /products/{product}/edit | edit     | ProductController   | products.edit    |
+| PUT    | /products/{product}      | update   | ProductController   | products.update  |
+| DELETE | /products/{product}      | destroy  | ProductController   | products.destroy |
+| GET    | /categories              | index    | CategoryController  | categories.index |
+| GET    | /suppliers               | index    | SupplierController  | suppliers.index  |
+| GET    | /profile                 | edit     | ProfileController   | profile.edit     |
+| PATCH  | /profile                 | update   | ProfileController   | profile.update   |
+| DELETE | /profile                 | destroy  | ProfileController   | profile.destroy  |
 
-This generates the following routes:
+Auth routes (login, register, logout, etc.) are provided by Laravel Breeze via `routes/auth.php`.
 
-| Method | URI                 | Action  | Route Name       |
-| ------ | ------------------- | ------- | ---------------- |
-| GET    | /products           | index   | products.index   |
-| GET    | /products/create    | create  | products.create  |
-| POST   | /products           | store   | products.store   |
-| GET    | /products/{id}/edit | edit    | products.edit    |
-| PUT    | /products/{id}      | update  | products.update  |
-| DELETE | /products/{id}      | destroy | products.destroy |
+## Features
 
-## Verifying Data
+### Authentication & Authorization (Task 07)
 
-### Using Tinker
+- **Laravel Breeze**: Register, login, logout, password reset
+- **Product ownership**: `user_id` foreign key on products; auto-assigned on creation
+- **ProductPolicy**: Only the product owner can edit/update/delete
+- **`@can` directives**: Edit/Delete buttons only visible to the owner
 
-You can verify the seeded data using Laravel Tinker:
+### Unified Layout (Task 08)
+
+- **Shared layout**: `layouts.app` with `@yield('content')` — all views extend it
+- **Navbar**: Dashboard, Products, Categories, Suppliers links with active highlighting
+- **User info**: Displays logged-in user's name/email + Logout button
+- **Guest links**: Login / Register for unauthenticated users
+- **Mobile nav**: Responsive collapsed nav for small screens
+
+### Dashboard (Task 08)
+
+- **3 summary cards**: Total Products, Total Categories, Total Suppliers with counts
+- **"View All" links**: Quick navigation from each card
+- **Latest 5 products table**: Name, category, price, owner, suppliers, created date
+
+### Flash Messages (Task 08)
+
+- **Success messages**: Green flash after product create/update/delete
+- **Error messages**: Red flash for general errors
+- **Displayed in layout**: All pages get flash messages automatically
+
+### Validation Errors
+
+- **Validation summary**: Red box listing all errors at the top of forms
+- **Field-level errors**: Inline error messages below each invalid field
+- **`.is-invalid` styling**: Red border on invalid inputs
+
+### Product Management
+
+- **List Products**: View all products with categories, suppliers, owner
+- **Create Product**: Add new products with name, price, category, and suppliers
+- **Edit Product**: Update existing product information (owner only)
+- **Delete Product**: Remove products with confirmation (owner only)
+- **Supplier Display**: Shows supplier count and details with pivot data
+
+### Categories & Suppliers
+
+- **Categories index**: Lists all categories with product counts
+- **Suppliers index**: Lists all suppliers with product counts
+
+## Tests
+
+15 Pest tests covering authentication and authorization:
 
 ```bash
-php artisan tinker
+php artisan test
 ```
 
-Then run:
+### Test Coverage
 
-```php
-// Get all categories
-App\Models\Category::all();
-
-// Get all products with their categories
-App\Models\Product::with('category')->get();
-
-// Get all suppliers
-App\Models\Supplier::all();
-
-// Get products with suppliers and pivot data
-App\Models\Product::with('suppliers')->get();
-
-// Access pivot data
-$product = App\Models\Product::with('suppliers')->first();
-foreach ($product->suppliers as $supplier) {
-    echo $supplier->name;
-    echo $supplier->pivot->cost_price;
-    echo $supplier->pivot->lead_time_days;
-}
-
-// Get products in a specific category
-App\Models\Category::where('name', 'Electronics')->first()->products;
-```
-
-Expected output:
-
-```
-// Products with categories
-Illuminate\Database\Eloquent\Collection {
-  all: [
-    App\Models\Product {
-      id: 1,
-      name: "Laptop",
-      price: "999.99",
-      category_id: 1,
-      category: App\Models\Category { id: 1, name: "Electronics", ... }
-    },
-    // ... more products
-  ],
-}
-```
-
-### Using the Web Interface
-
-1. Navigate to `http://localhost:8000` after starting the server
-2. Browse the list of products
-3. Click "Add New Product" to create a product
-4. Click "Edit" to modify a product
-5. Click "Delete" to remove a product
+| Test                                                              | Description                  |
+| ----------------------------------------------------------------- | ---------------------------- |
+| Guest cannot view products index                                  | Redirects to login           |
+| Guest cannot access product create page                           | Redirects to login           |
+| Guest cannot store a product                                      | Redirects to login           |
+| Guest cannot access product edit page                             | Redirects to login           |
+| Guest cannot update a product                                     | Redirects to login           |
+| Guest cannot delete a product                                     | Redirects to login           |
+| Logged in user can access product create page                     | Returns 200                  |
+| Logged in user can store a product and ownership is assigned      | Creates product with user_id |
+| Logged in user can update their own product                       | Updates successfully         |
+| Logged in user can delete their own product                       | Deletes successfully         |
+| Logged in user cannot update another user's product               | Returns 403                  |
+| Logged in user cannot delete another user's product               | Returns 403                  |
+| Logged in user cannot access edit page for another user's product | Returns 403                  |
 
 ## Project Structure
 
@@ -250,215 +239,88 @@ Illuminate\Database\Eloquent\Collection {
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   └── ProductController.php      # Resource controller with supplier sync
+│   │   ├── Controller.php              # Base controller (AuthorizesRequests)
+│   │   ├── DashboardController.php     # Dashboard with counts + latest products
+│   │   ├── ProductController.php       # Product CRUD with authorization
+│   │   ├── CategoryController.php      # Category index with product counts
+│   │   ├── SupplierController.php      # Supplier index with product counts
+│   │   └── ProfileController.php       # User profile management (Breeze)
 │   └── Requests/
-│       ├── StoreProductRequest.php    # Validation for creating products
-│       └── UpdateProductRequest.php   # Validation for updating products
-└── Models/
-    ├── Product.php                     # Product model (belongsTo Category, belongsToMany Suppliers)
-    ├── Category.php                    # Category model (hasMany Products)
-    └── Supplier.php                    # Supplier model (belongsToMany Products)
+│       ├── StoreProductRequest.php     # Validation for creating products
+│       └── UpdateProductRequest.php    # Validation for updating products
+├── Models/
+│   ├── Product.php                     # belongsTo Category/User, belongsToMany Suppliers
+│   ├── Category.php                    # hasMany Products
+│   ├── Supplier.php                    # belongsToMany Products
+│   └── User.php                        # hasMany Products
+├── Policies/
+│   └── ProductPolicy.php              # update/delete: owner check
+└── Providers/
+    └── AppServiceProvider.php
 
 database/
+├── factories/
+│   ├── CategoryFactory.php
+│   ├── ProductFactory.php
+│   └── UserFactory.php
 ├── migrations/
-│   ├── 2025_12_06_161500_create_categories_table.php    # Categories table
-│   ├── 2025_12_06_161522_create_products_table.php      # Products table
-│   ├── 2025_12_06_170000_create_suppliers_table.php     # Suppliers table
-│   └── 2025_12_06_170100_create_product_supplier_table.php  # Pivot table
+│   ├── create_users_table.php
+│   ├── create_categories_table.php
+│   ├── create_products_table.php
+│   ├── create_suppliers_table.php
+│   ├── create_product_supplier_table.php
+│   └── add_user_id_to_products_table.php
 └── seeders/
-    ├── DatabaseSeeder.php              # Main seeder (calls all seeders)
-    ├── CategorySeeder.php              # Seeds 7 categories
-    ├── SupplierSeeder.php              # Seeds 5 suppliers
-    ├── ProductSeeder.php               # Seeds 5 products
-    └── ProductSupplierSeeder.php       # Seeds pivot data (1-3 suppliers per product)
+    ├── DatabaseSeeder.php
+    ├── CategorySeeder.php
+    ├── SupplierSeeder.php
+    ├── ProductSeeder.php
+    └── ProductSupplierSeeder.php
 
-resources/
-└── views/
-    └── products/
-        ├── index.blade.php             # List products with supplier info
-        ├── create.blade.php            # Create form with supplier selection
-        └── edit.blade.php              # Edit form with supplier management
+resources/views/
+├── layouts/
+│   └── app.blade.php                   # Unified layout (navbar, flash, styles)
+├── dashboard.blade.php                 # Dashboard with cards + latest products
+├── products/
+│   ├── index.blade.php                 # Product list with owner/supplier info
+│   ├── create.blade.php                # Create form with supplier selection
+│   └── edit.blade.php                  # Edit form with supplier management
+├── categories/
+│   └── index.blade.php                 # Category list with product counts
+├── suppliers/
+│   └── index.blade.php                 # Supplier list with product counts
+└── auth/                               # Breeze auth views (login, register, etc.)
 
 routes/
-└── web.php                             # Resource routes for products
+├── web.php                             # All app routes (auth-protected)
+└── auth.php                            # Breeze auth routes
+
+tests/Feature/
+├── ExampleTest.php
+└── ProductAuthorizationTest.php        # 13 auth/authorization tests
 ```
-
-## Seeded Data
-
-### Categories (7)
-
--   Electronics
--   Fashion
--   Home & Kitchen
--   Sports & Outdoors
--   Books
--   Toys & Games
--   Health & Beauty
-
-### Suppliers (5)
-
-| Name               | Email                  |
-| ------------------ | ---------------------- |
-| Tech Parts Co.     | contact@techparts.com  |
-| Global Supply Inc. | sales@globalsupply.com |
-| Prime Distributors | orders@primedist.com   |
-| Quality Goods Ltd. | info@qualitygoods.com  |
-| Express Wholesale  | wholesale@express.com  |
-
-### Products (5)
-
-| Name                | Price   | Category    |
-| ------------------- | ------- | ----------- |
-| Laptop              | $999.99 | Electronics |
-| Smartphone          | $599.50 | Electronics |
-| Headphones          | $149.99 | Electronics |
-| Wireless Mouse      | $29.99  | Electronics |
-| Mechanical Keyboard | $89.99  | Electronics |
-
-Each product is seeded with 1-3 random suppliers with cost_price and lead_time_days.
 
 ## Model Relationships
 
-### Product Model
-
-```php
-// One-to-Many: Product belongs to Category
-public function category(): BelongsTo
-{
-    return $this->belongsTo(Category::class);
-}
-
-// Many-to-Many: Product has many Suppliers with pivot data
-public function suppliers(): BelongsToMany
-{
-    return $this->belongsToMany(Supplier::class)
-        ->withPivot(['cost_price', 'lead_time_days'])
-        ->withTimestamps();
-}
 ```
-
-### Category Model
-
-```php
-public function products(): HasMany
-{
-    return $this->hasMany(Product::class);
-}
-```
-
-### Supplier Model
-
-```php
-public function products(): BelongsToMany
-{
-    return $this->belongsToMany(Product::class)
-        ->withPivot(['cost_price', 'lead_time_days'])
-        ->withTimestamps();
-}
-```
-
-## Controller Methods
-
-### Eager Loading (Avoid N+1)
-
-```php
-// In index method - eager load relationships and count
-$products = Product::with(['category', 'suppliers'])
-    ->withCount('suppliers')
-    ->get();
-```
-
-### Syncing Suppliers with Pivot Data
-
-```php
-// Sync suppliers with pivot data
-$syncData = [];
-foreach ($suppliers as $supplierId => $data) {
-    if (!empty($data['selected'])) {
-        $syncData[$supplierId] = [
-            'cost_price' => $data['cost_price'],
-            'lead_time_days' => $data['lead_time_days'],
-        ];
-    }
-}
-$product->suppliers()->sync($syncData);
-```
-
-## Form Input Structure
-
-The supplier form uses the following naming convention:
-
-```html
-<!-- Checkbox to select supplier -->
-<input type="checkbox" name="suppliers[SUPPLIER_ID][selected]" value="1" />
-
-<!-- Pivot data inputs -->
-<input type="number" name="suppliers[SUPPLIER_ID][cost_price]" />
-<input type="number" name="suppliers[SUPPLIER_ID][lead_time_days]" />
+User ──hasMany──▶ Product
+Category ──hasMany──▶ Product
+Product ──belongsTo──▶ Category
+Product ──belongsTo──▶ User
+Product ◀──belongsToMany──▶ Supplier (pivot: cost_price, lead_time_days)
 ```
 
 ## Key Learning Points
 
-1. **Many-to-Many Relationships**: Using `belongsToMany()` with pivot tables
-2. **Pivot Data**: Storing additional data in pivot tables with `withPivot()`
-3. **Pivot Timestamps**: Tracking pivot record changes with `withTimestamps()`
-4. **Sync Method**: Using `sync()` to manage many-to-many relationships
-5. **Eager Loading**: Using `with()` and `withCount()` to avoid N+1 queries
-6. **Cascade Deletes**: Configuring foreign keys to cascade on delete
-7. **Composite Unique Constraints**: Preventing duplicate pivot records
-8. **Complex Form Validation**: Validating nested array inputs for pivot data
-9. **Form Request Classes**: Separating validation logic with custom rules
-10. **Blade Loops**: Displaying pivot data in views
-
----
-
-## About Laravel
-
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
-
--   [Simple, fast routing engine](https://laravel.com/docs/routing).
--   [Powerful dependency injection container](https://laravel.com/docs/container).
--   Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
--   Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
--   Database agnostic [schema migrations](https://laravel.com/docs/migrations).
--   [Robust background job processing](https://laravel.com/docs/queues).
--   [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
--   **[Vehikl](https://vehikl.com)**
--   **[Tighten Co.](https://tighten.co)**
--   **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
--   **[64 Robots](https://64robots.com)**
--   **[Curotec](https://www.curotec.com/services/technologies/laravel)**
--   **[DevSquad](https://devsquad.com/hire-laravel-developers)**
--   **[Redberry](https://redberry.international/laravel-development)**
--   **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. **Authentication**: Laravel Breeze for full auth scaffolding
+2. **Authorization**: Policies for resource-level access control
+3. **Product Ownership**: Assigning `user_id` on creation, checking on edit/delete
+4. **Unified Layout**: `@extends` / `@yield` / `@section` pattern for DRY views
+5. **Flash Messages**: `->with('success', ...)` in controllers, displayed in layout
+6. **Dashboard**: Aggregating model counts and recent records
+7. **Active Nav Links**: `request()->routeIs()` for highlighting current page
+8. **Many-to-Many with Pivot**: `belongsToMany()->withPivot()->withTimestamps()`
+9. **Eager Loading**: `with()` and `withCount()` to prevent N+1
+10. **Pest Testing**: Feature tests for auth flows and 403 authorization checks
+11. **Form Request Validation**: Separating validation with custom error messages
+12. **Middleware Groups**: Protecting route groups with `auth` middleware
